@@ -1,145 +1,173 @@
 # AI Motions
 
-AI Motions is a local-first AI short-video studio. It turns a user prompt, PPT, or PDF into an editable short-video draft with a chat workflow, script confirmation, storyboard editing, stock media, voiceover, and MP4 rendering.
+AI Motions 是一个本地运行的 AI 短视频生成和编辑工具。你可以像聊天一样描述想做的视频，也可以上传 PPT/PDF，然后让它生成脚本、分镜、素材、配音和视频草稿。
 
-The current app is a prototype for the full product flow:
+这个项目现在更适合做一个“在线剪辑玩法”的原型：
 
-1. Describe the video you want, or upload a PPT/PDF as source material.
-2. Confirm the creative direction, script, language, voice, aspect ratio, and duration.
-3. Review the generated storyboard and the media prepared for each scene.
-4. Replace text, images, videos, timing, and local user media.
-5. Save drafts and render a preview/video when ready.
+1. 左边聊天，输入你想做的视频。
+2. 系统先确认脚本、比例、时长、语言和配音。
+3. 右边展示分镜、素材和预览。
+4. 你可以继续聊天修改，也可以手动改字幕、图片、镜头时长和动效。
+5. 确认后生成 MP4 视频。
 
-## Features
+## 适合谁
 
-- Multi-turn chat for video briefs and revisions.
-- Script and plan confirmation before expensive media generation.
-- Editable storyboard with scene duration and shot-level media.
-- Stock media search/download with Pexels and Pixabay when API keys are configured.
-- User media uploads for images and videos.
-- Draft storage in local SQLite.
-- Voiceover presets for Chinese, English, Japanese, and Korean.
-- HTML composition preview plus MP4 rendering through Playwright/browser capture and FFmpeg.
-- Legacy PPT/PDF upload pipeline for turning slides into a first video draft.
+- 门店老板：做火锅店、饺子馆、旅游、探店等宣传视频。
+- 短视频运营：快速生成脚本、分镜和素材草稿。
+- AI 视频学习者：研究“对话 -> 脚本 -> 分镜 -> 素材 -> 配音 -> 视频”的完整流程。
+- 开发者：基于这个原型继续做成产品。
 
-## Requirements
+## 你能用它做什么
 
-- Node.js 20 or newer.
-- npm.
-- Playwright browsers. Run `npx playwright install` if your machine does not already have them.
-- FFmpeg for MP4 output. Without FFmpeg, the app can still generate and preview the HTML composition.
-- `unzip` for PPTX text extraction.
-- API keys are optional, but required for cloud LLM/TTS and stock media quality.
+- 输入一句想法生成视频方案，例如：“帮我做一个宣传我们家火锅店的视频”。
+- 上传 PPT/PDF 作为参考内容。
+- 生成可编辑分镜，每个分镜下面有多个镜头素材。
+- 替换每张图片或视频素材。
+- 上传自己的门店照片、产品图、视频素材。
+- 选择视频语言和配音类型。
+- 保存草稿，下次继续编辑。
+- 生成 HTML 预览和 MP4 视频。
 
-## Quick Start
+## 最简单启动方式
+
+先安装 Node.js 20 或更新版本。
 
 ```bash
 npm install
-cp .env.example .env
 npm run dev
 ```
 
-Open `http://localhost:4173`.
-
-Edit `.env` to enable cloud services. Do not commit `.env`.
-
-## Configuration
-
-| Variable | Required | Description |
-| --- | --- | --- |
-| `PORT` | No | Local server port. Defaults to `4173`. |
-| `MAX_UPLOAD_BYTES` | No | Maximum request body size. Defaults to `52428800` bytes. |
-| `DASHSCOPE_API_KEY` | No | Aliyun DashScope API key for Qwen planning/TTS flows. |
-| `ALIYUN_TTS_MODEL` | No | Aliyun TTS model. Defaults to `qwen3-tts-instruct-flash` when DashScope is enabled. |
-| `ALIYUN_TTS_VOICE` | No | Advanced voice override. Usually leave empty so UI selections work. |
-| `ALIYUN_TTS_VOICE_FORCE` | No | Set to `1` only when you intentionally want env config to override UI voice choices. |
-| `ALIYUN_TTS_INSTRUCTION` | No | Advanced TTS instruction override. |
-| `ALIYUN_TTS_INSTRUCTION_FORCE` | No | Set to `1` only when you intentionally want env config to override UI tone/style choices. |
-| `PEXELS_API_KEY` | No | Enables Pexels stock media search. |
-| `PIXABAY_API_KEY` | No | Enables Pixabay stock media search. |
-| `OPENAI_API_KEY` | No | Reserved for OpenAI TTS integration. |
-| `OPENAI_TTS_MODEL` | No | Reserved for OpenAI TTS integration. |
-
-## Scripts
-
-```bash
-npm run dev      # Start the local server
-npm run start    # Start the local server
-npm test         # Run the Node test suite
-```
-
-There is no separate build step in this prototype.
-
-## Project Structure
+打开浏览器访问：
 
 ```text
-public/              Browser UI
-src/server.js        HTTP server, API routes, static file serving
-src/planner.js       Project creation and multi-turn revision flow
-src/creativePlanner.js
-                     LLM-backed creative brief and storyboard planning
-src/stockMedia.js    Stock media search/download and storyboard media assignment
-src/tts.js           Voiceover provider selection and rendering
-src/render.js        Composition writing and MP4 rendering
-src/projectStore.js  Local SQLite draft storage
-test/                Node test suite
-uploads/             Local uploaded files, ignored by git
-jobs/                Generated compositions/media/videos, ignored by git
-data/                Local SQLite database, ignored by git
+http://localhost:4173
 ```
 
-## Security And Privacy
+第一次打开后，点击页面右上角的 **配置中心**。你可以直接在页面里填写 Key，不需要手动编辑 `.env` 文件。
 
-This repository is designed for local development and experimentation. Before exposing it to other users or the public internet, review the following points.
+## 新手配置说明
 
-- Do not commit `.env`, real API keys, uploaded files, generated jobs, or the SQLite database.
-- `.gitignore` excludes `uploads/`, `jobs/`, `data/`, `.env*`, logs, and local temporary screenshots.
-- Local uploads are stored under `uploads/`.
-- Generated media, compositions, audio, and MP4 files are stored under `jobs/`.
-- Drafts are stored in `data/ai-motions.sqlite`.
-- The server now confines static file reads to their configured roots and rejects path traversal.
-- The server has a configurable request body limit through `MAX_UPLOAD_BYTES`.
-- Server errors are logged locally, while production clients receive a generic `Internal server error` for unexpected failures.
-- This prototype does not include authentication, authorization, per-user isolation, rate limiting, billing controls, malware scanning, or provider-cost quotas.
-- If you deploy it beyond localhost, put it behind authentication, HTTPS, request rate limits, upload scanning, storage lifecycle cleanup, and a reverse proxy with body-size limits.
-- Stock assets come from third-party providers. Check Pexels/Pixabay license terms before commercial use.
-- Uploaded PPT/PDF/image/video files may contain confidential data. Treat `uploads/`, `jobs/`, and `data/` as private local data.
+页面里的 **配置中心** 会把配置保存到你本机项目根目录的 `.env` 文件。
 
-## Open-Source Checklist
+最重要的是：
 
-Before publishing the repository:
+- **阿里 DashScope Key**：让软件理解你的需求、生成脚本、走多轮对话和生成配音。建议优先配置。
+- **Pexels Key**：让软件搜索真实图片和视频素材。可选。
+- **Pixabay Key**：补充更多真实视频素材。可选。
 
-1. Add a `LICENSE` file. Without a license, other people do not have clear permission to use, modify, or redistribute the code.
-2. Confirm no real secrets are present:
+不配置 Key 也可以打开页面，但效果会变弱：
 
-   ```bash
-   git status --short
-   git grep -n "DASHSCOPE_API_KEY\\|PEXELS_API_KEY\\|PIXABAY_API_KEY\\|OPENAI_API_KEY"
-   ```
+- 脚本理解会更多依赖本地兜底逻辑。
+- 配音可能退回到本机系统声音。
+- 素材可能只能用本地兜底图或生成式占位图。
 
-3. Remove or keep untracked local runtime folders out of git:
+## Key 从哪里来
 
-   ```bash
-   git status --ignored --short
-   ```
+### 阿里 DashScope
 
-4. Run the test suite:
+用于 AI 理解、脚本和配音。
 
-   ```bash
-   npm test
-   ```
+你需要去阿里云 DashScope 控制台创建 API Key，然后复制到页面的 **配置中心 -> 阿里 DashScope**。
 
-5. Start the app and verify the core flow:
+推荐模型默认使用：
 
-   ```bash
-   npm run dev
-   ```
+```text
+qwen3-tts-instruct-flash
+```
 
-## Current Limitations
+### Pexels / Pixabay
 
-- This is still a local prototype, not a hosted multi-tenant SaaS backend.
-- The LLM and media provider behavior depends on configured keys and provider availability.
-- OpenAI TTS variables are present for future wiring, but the current local MVP does not render OpenAI TTS audio yet.
-- PPT/PDF conversion extracts text where possible; perfect slide visual fidelity is not guaranteed.
-- Generated videos may require additional editing for production-grade ads.
+用于搜索真实图片和视频素材。
+
+这两个是可选项。没有它们，软件也能运行，只是素材质量会受影响。
+
+## 常见问题
+
+### 为什么我生成的视频没有声音？
+
+通常是没有配置 DashScope Key，或者云端配音失败后退回到了本机声音。先去 **配置中心** 看看 “AI：已配置/未配置”。
+
+### 为什么素材不够真实？
+
+真实素材依赖 Pexels/Pixabay。去 **配置中心** 填写素材库 Key 后，再让系统重新找素材。
+
+### 为什么生成很慢？
+
+找素材、生成配音、合成视频都比较耗时。页面里会显示生成阶段和耗时，不是卡死。
+
+### 我可以把 `.env` 发给别人吗？
+
+不可以。`.env` 里面可能有你的 API Key。别人拿到后可能会消耗你的额度。
+
+### 能直接部署到公网给别人用吗？
+
+不建议。当前版本是本地原型，没有登录、权限隔离、额度控制、上传文件扫描和多用户安全机制。如果要公网部署，需要先补这些能力。
+
+## 本地数据在哪里
+
+这些目录会被 `.gitignore` 忽略，不会提交到 Git：
+
+- `uploads/`：你上传的 PPT/PDF/图片/视频。
+- `jobs/`：生成的视频、素材、配音和 HTML 预览。
+- `data/`：本地草稿数据库。
+- `.env`：你的 API Key 配置。
+
+不要把这些目录公开上传。
+
+## 开发命令
+
+```bash
+npm run dev      # 启动本地服务
+npm run start    # 启动本地服务
+npm test         # 运行测试
+```
+
+当前没有单独的 build 步骤。
+
+## 运行环境
+
+- Node.js 20+
+- npm
+- Playwright 浏览器环境。如果本机没有，可以运行：
+
+  ```bash
+  npx playwright install
+  ```
+
+- FFmpeg：用于输出 MP4。没有 FFmpeg 时，仍然可以生成 HTML 预览。
+- `unzip`：用于读取 PPTX 文本。
+
+## 项目结构
+
+```text
+public/              前端页面
+src/server.js        本地 HTTP 服务和 API
+src/config.js        .env 读取和页面配置保存
+src/planner.js       项目创建、多轮对话和修改逻辑
+src/creativePlanner.js
+                     AI 脚本和创意规划
+src/stockMedia.js    真实素材搜索、下载和分配
+src/tts.js           配音选择和生成
+src/render.js        HTML 预览和 MP4 渲染
+src/projectStore.js  本地 SQLite 草稿存储
+test/                自动化测试
+```
+
+## 安全提醒
+
+- 不要提交 `.env`。
+- 不要提交 `uploads/`、`jobs/`、`data/`。
+- 页面配置中心会保存 Key 到本机 `.env`，只适合本地使用。
+- 如果 Key 泄露，立即去对应平台删除或重置。
+- 如果你要把它做成公网产品，需要加入登录、权限、限流、上传扫描、费用控制和用户数据隔离。
+
+## 开源前检查
+
+```bash
+git status --short
+npm test
+npm audit --omit=dev
+```
+
+还需要添加 `LICENSE` 文件。没有许可证时，别人没有清晰的使用、修改和分发权限。如果没有特别偏好，工具类项目可以考虑 MIT License。
 

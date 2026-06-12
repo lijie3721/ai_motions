@@ -43,3 +43,22 @@ test("rendered video uses a responsive player shell so controls are not clipped"
   assert.match(html, /width:\s*min\(100%, 860px, 72vh\)/);
   assert.doesNotMatch(html, /<video controls playsinline preload="metadata" src="\$\{render\.links\.mp4\}[^`]+style="/);
 });
+
+test("settings center gives beginners clear provider setup guidance", async () => {
+  const html = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
+
+  assert.match(html, /配置中心/);
+  assert.match(html, /阿里 DashScope/);
+  assert.match(html, /用于理解你的需求、生成脚本和配音/);
+  assert.match(html, /Pexels 素材库/);
+  assert.match(html, /Pixabay 素材库/);
+  assert.match(html, /去配置/);
+});
+
+test("settings center persists keys through API instead of localStorage", async () => {
+  const html = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
+
+  assert.match(html, /\/api\/settings/);
+  assert.match(html, /saveSettings/);
+  assert.doesNotMatch(html, /localStorage\.setItem\([^)]*(DASHSCOPE|PEXELS|PIXABAY|OPENAI|ApiKey|apiKey)/);
+});

@@ -1,4 +1,4 @@
-import { loadLocalEnv } from "./config.js";
+import { loadLocalEnv, readPublicSettings, saveLocalSettings } from "./config.js";
 import { createServer } from "node:http";
 import { createReadStream } from "node:fs";
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
@@ -75,6 +75,14 @@ const server = createServer(async (request, response) => {
 
     if (request.method === "GET" && url.pathname === "/api/projects") {
       return sendJson(response, 200, { projects: projectStore.listProjects() });
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/settings") {
+      return sendJson(response, 200, await readPublicSettings());
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/settings") {
+      return saveSettings(request, response);
     }
 
     if (request.method === "GET" && /^\/api\/projects\/[^/]+$/.test(url.pathname)) {
@@ -215,6 +223,27 @@ async function createProject(request, response) {
   const project = await createProjectFromPromptAsync(prompt);
   saveProject(project);
   return sendJson(response, 201, toPublicProject(project));
+}
+
+async function saveSettings(request, response) {
+  const payload = await readJsonBody(request);
+  const settings = await handleSettingsPayload({ payload });
+  return sendJson(response, 200, settings);
+}
+
+export async function handleSettingsPayload({ payload, filePath, env = process.env }) {
+  const updates = {
+    DASHSCOPE_API_KEY: payload.dashscopeApiKey,
+    PEXELS_API_KEY: payload.pexelsApiKey,
+    PIXABAY_API_KEY: payload.pixabayApiKey,
+    ALIYUN_TTS_MODEL: payload.aliyunTtsModel,
+  };
+  const clear = [
+    payload.clearDashscope ? "DASHSCOPE_API_KEY" : null,
+    payload.clearPexels ? "PEXELS_API_KEY" : null,
+    payload.clearPixabay ? "PIXABAY_API_KEY" : null,
+  ].filter(Boolean);
+  return saveLocalSettings({ filePath, env, updates, clear });
 }
 
 async function appendProjectMessage(id, request, response) {

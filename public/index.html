@@ -566,6 +566,47 @@
       line-height: 1.35;
     }
 
+    .setup-alert {
+      display: grid;
+      gap: 9px;
+      border: 1px solid var(--red);
+      background: #ffe8dc;
+      padding: 12px;
+      line-height: 1.42;
+      box-shadow: 5px 5px 0 rgba(223, 63, 40, 0.1);
+    }
+
+    .setup-alert strong,
+    .setup-card strong {
+      display: block;
+      margin-bottom: 3px;
+    }
+
+    .status-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-top: 7px;
+    }
+
+    .status-chip {
+      border: 1px solid var(--line);
+      background: var(--paper);
+      padding: 5px 7px;
+      font-size: 11px;
+      font-weight: 1000;
+    }
+
+    .status-chip.is-ready {
+      border-color: var(--green);
+      color: var(--green);
+    }
+
+    .status-chip.is-missing {
+      border-color: var(--red);
+      color: var(--red);
+    }
+
     .side {
       min-height: 0;
       overflow: auto;
@@ -739,6 +780,37 @@
       color: var(--muted);
       font-size: 12px;
       line-height: 1.35;
+    }
+
+    .setup-panel {
+      display: grid;
+      gap: 12px;
+    }
+
+    .setup-card {
+      border: 1px solid var(--line);
+      background: #fffdf8;
+      padding: 12px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .setup-card p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.42;
+      font-size: 12px;
+    }
+
+    .setup-card .masked {
+      color: var(--green);
+      font-weight: 1000;
+    }
+
+    .setup-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
     }
 
     .timeline {
@@ -1169,6 +1241,8 @@
       isSending: false,
       pendingMessage: "",
       pendingUserMessage: "",
+      settings: null,
+      settingsNotice: "",
     };
 
     const messagesEl = document.getElementById("messages");
@@ -1258,7 +1332,20 @@
       });
     });
 
-    restoreLastProject();
+    init();
+
+    async function init() {
+      await loadSettings();
+      await restoreLastProject();
+    }
+
+    async function loadSettings() {
+      try {
+        state.settings = await getJson("/api/settings");
+      } catch {
+        state.settings = null;
+      }
+    }
 
     async function restoreLastProject() {
       const id = localStorage.getItem("aiMotionsCurrentProjectId");
@@ -1270,6 +1357,40 @@
       } catch {
         localStorage.removeItem("aiMotionsCurrentProjectId");
         renderEmptyState();
+      }
+    }
+
+    async function showSettingsCenter() {
+      await loadSettings();
+      renderSettingsCenter();
+    }
+
+    async function saveSettings(event) {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const button = form.querySelector("button[type='submit']");
+      const formData = new FormData(form);
+      try {
+        if (button) {
+          button.disabled = true;
+          button.textContent = "正在保存...";
+        }
+        state.settings = await postJson("/api/settings", {
+          dashscopeApiKey: formData.get("dashscopeApiKey"),
+          pexelsApiKey: formData.get("pexelsApiKey"),
+          pixabayApiKey: formData.get("pixabayApiKey"),
+          aliyunTtsModel: formData.get("aliyunTtsModel"),
+          clearDashscope: formData.get("clearDashscope") === "on",
+          clearPexels: formData.get("clearPexels") === "on",
+          clearPixabay: formData.get("clearPixabay") === "on",
+        });
+        state.settingsNotice = "已保存，后续生成会使用新配置。";
+        renderSettingsCenter();
+        renderHeader();
+        renderActions();
+      } catch (error) {
+        alert(error.message);
+        renderSettingsCenter();
       }
     }
 
@@ -1547,10 +1668,12 @@
     }
 
     function renderEmptyState() {
-      messagesEl.innerHTML = `<div class="msg">说出你想做的视频。我会先确认平台、比例、时长和风格，再生成可编辑分镜。</div>`;
+      messagesEl.innerHTML = `${renderSetupPrompt()}<div class="msg">说出你想做的视频。我会先确认平台、比例、时长和风格，再生成可编辑分镜。</div>`;
+      messagesEl.querySelector("#openSettingsFromChat")?.addEventListener("click", showSettingsCenter);
       projectTitle.textContent = "Start with a sentence.";
       projectMeta.textContent = "No project yet · waiting for your idea";
-      topActions.innerHTML = `<button class="ghost" id="newProjectButton" type="button">新建</button><button class="ghost" id="draftBoxButton" type="button">草稿箱</button><button class="ghost" type="button" disabled>保存草稿</button><button class="solid" type="button" disabled>确认并生成视频</button>`;
+      topActions.innerHTML = `<button class="ghost" id="settingsButton" type="button">配置中心</button><button class="ghost" id="newProjectButton" type="button">新建</button><button class="ghost" id="draftBoxButton" type="button">草稿箱</button><button class="ghost" type="button" disabled>保存草稿</button><button class="solid" type="button" disabled>确认并生成视频</button>`;
+      topActions.querySelector("#settingsButton")?.addEventListener("click", showSettingsCenter);
       topActions.querySelector("#newProjectButton")?.addEventListener("click", newProject);
       topActions.querySelector("#draftBoxButton")?.addEventListener("click", loadDrafts);
       videoFrame.innerHTML = `<div class="video-canvas" style="background-image:linear-gradient(0deg, rgba(16,16,14,.9), rgba(16,16,14,.32)),url('/public/assets/hotpot/hotpot-table.jpg')">
@@ -1558,7 +1681,8 @@
         <div class="hero-caption"><span>Chat first · Edit later</span><h3>左侧输入一句想法，我先帮你确认方案。</h3></div>
       </div>`;
       confirmBanner.innerHTML = `<div><strong>等待输入</strong>输入想法后会先进入确认流程，不会直接生成视频。</div><button class="solid" type="button" disabled>等待确认</button>`;
-      sidePanel.innerHTML = `<section class="panel"><h3>Selected image</h3><p style="color:var(--muted);line-height:1.4">确认方案后，点击底部分镜里的任意图片，就能编辑它的字幕、时长、动效和素材。</p></section><section class="panel"><h3>Draft box</h3><button class="ghost" id="draftBoxSideButton" type="button">打开草稿箱</button></section><details class="scene-details"><summary>Scene details</summary><p style="color:var(--muted);line-height:1.4">生成分镜后可以展开编辑标题、旁白和视觉方向。</p></details>`;
+      sidePanel.innerHTML = `<section class="panel"><h3>Selected image</h3><p style="color:var(--muted);line-height:1.4">确认方案后，点击底部分镜里的任意图片，就能编辑它的字幕、时长、动效和素材。</p></section><section class="panel"><h3>新手配置</h3>${renderSettingsSummary()}<button class="ghost" id="settingsSideButton" type="button">去配置</button></section><section class="panel"><h3>Draft box</h3><button class="ghost" id="draftBoxSideButton" type="button">打开草稿箱</button></section><details class="scene-details"><summary>Scene details</summary><p style="color:var(--muted);line-height:1.4">生成分镜后可以展开编辑标题、旁白和视觉方向。</p></details>`;
+      sidePanel.querySelector("#settingsSideButton")?.addEventListener("click", showSettingsCenter);
       sidePanel.querySelector("#draftBoxSideButton")?.addEventListener("click", loadDrafts);
       sceneRow.innerHTML = `<article class="scene-card"><div><h4>等待确认方案</h4><p>生成分镜后，这里会出现可编辑的 scenes 和 shots。</p></div></article>`;
       updateComposerState();
@@ -1567,13 +1691,23 @@
     function renderMessages() {
       const pendingUser = state.pendingUserMessage ? `<div class="msg user">${escapeHtml(state.pendingUserMessage)}</div>` : "";
       const pendingAssistant = state.isSending ? renderThinkingMessage() : "";
-      messagesEl.innerHTML = state.project.messages.map((message) => `
+      messagesEl.innerHTML = renderSetupPrompt() + state.project.messages.map((message) => `
         <div class="msg ${message.role === "user" ? "user" : ""}">${escapeHtml(message.content)}</div>
       `).join("") + pendingUser + pendingAssistant + (state.project.status === "needs_script_confirmation" ? renderScriptConfirmationCard() : state.project.status === "needs_material_confirmation" ? renderMaterialConfirmationCard() : state.project.status === "needs_confirmation" ? renderConfirmationCard() : "");
       messagesEl.scrollTop = messagesEl.scrollHeight;
+      messagesEl.querySelector("#openSettingsFromChat")?.addEventListener("click", showSettingsCenter);
       messagesEl.querySelector("#confirmPlanButton")?.addEventListener("click", confirmPlan);
       messagesEl.querySelector("#confirmMaterialButton")?.addEventListener("click", () => confirmMaterialRefresh(true));
       messagesEl.querySelector("#cancelMaterialButton")?.addEventListener("click", () => confirmMaterialRefresh(false));
+    }
+
+    function renderSetupPrompt() {
+      if (state.settings?.providers?.dashscope?.configured) return "";
+      return `<div class="setup-alert">
+        <div><strong>还没配置 AI Key</strong>当前只能体验基础功能。配置阿里 DashScope 后，软件才能更好地理解你的需求、生成脚本和配音。</div>
+        <div>${renderSettingsSummary()}</div>
+        <button class="ghost" id="openSettingsFromChat" type="button">去配置</button>
+      </div>`;
     }
 
     function renderScriptConfirmationCard() {
@@ -1665,12 +1799,13 @@
       const scenes = state.project.storyboard?.scenes || [];
       const shots = scenes.flatMap((scene) => scene.shots || []);
       const status = state.project.render?.status === "complete" ? "Rendered" : state.project.status === "needs_material_confirmation" ? "Material confirm" : state.project.status === "needs_script_confirmation" ? "Script ready" : state.project.status === "needs_confirmation" ? "Needs confirmation" : "Draft ready";
-      projectMeta.textContent = `${status} · ${state.project.storyboard?.duration || state.project.confirmation?.duration || 0}s · ${scenes.length} scenes · ${shots.length} shots · ${languageLabel(state.project.confirmation?.language || state.project.storyboard?.language)} · ${voicePresetLabel(state.project.confirmation?.voicePreset)}`;
+      projectMeta.textContent = `${status} · ${state.project.storyboard?.duration || state.project.confirmation?.duration || 0}s · ${scenes.length} scenes · ${shots.length} shots · ${languageLabel(state.project.confirmation?.language || state.project.storyboard?.language)} · ${voicePresetLabel(state.project.confirmation?.voicePreset)} · ${settingsTextStatus()}`;
     }
 
     function renderActions() {
       const canRender = !["needs_confirmation", "needs_script_confirmation", "needs_material_confirmation"].includes(state.project.status) && state.project.render?.status !== "rendering";
       topActions.innerHTML = `
+        <button class="ghost" id="settingsButton" type="button">配置中心</button>
         <button class="ghost" id="newProjectButton" type="button">新建</button>
         <button class="ghost" id="draftBoxButton" type="button">草稿箱</button>
         <button class="ghost" id="saveDraftButton" type="button">${state.saveNotice || "保存草稿"}</button>
@@ -1678,6 +1813,7 @@
         ${state.project.render?.links?.mp4 ? `<a class="ghost" href="${state.project.render.links.mp4}" download>下载 MP4</a>` : ""}
         <button class="solid" id="renderButton" type="button" ${canRender ? "" : "disabled"}>${state.project.render?.status === "rendering" ? "生成中..." : "确认并生成视频"}</button>
       `;
+      topActions.querySelector("#settingsButton")?.addEventListener("click", showSettingsCenter);
       topActions.querySelector("#newProjectButton")?.addEventListener("click", newProject);
       topActions.querySelector("#draftBoxButton")?.addEventListener("click", loadDrafts);
       topActions.querySelector("#saveDraftButton")?.addEventListener("click", saveDraft);
@@ -1773,6 +1909,72 @@
       sidePanel.querySelectorAll("[data-asset-id]").forEach((button) => {
         button.addEventListener("click", () => replaceShotMedia(button.dataset.assetId));
       });
+    }
+
+    function renderSettingsCenter() {
+      const providers = state.settings?.providers || {};
+      sidePanel.innerHTML = `<section class="panel setup-panel">
+        <div class="shot-editor-head">
+          <h3>配置中心</h3>
+          <button class="ghost" id="closeSettingsButton" type="button">返回编辑</button>
+        </div>
+        <p style="margin:0;color:var(--muted);line-height:1.45">这些 Key 会保存到你本机项目里的 .env 文件。不要把 .env 发给别人，也不要把带真实 Key 的项目目录公开上传。</p>
+        ${state.settingsNotice ? `<div class="setup-alert"><strong>${escapeHtml(state.settingsNotice)}</strong></div>` : ""}
+        ${renderSettingsSummary()}
+        <form id="settingsForm">
+          <div class="setup-card">
+            <strong>阿里 DashScope</strong>
+            <p>用于理解你的需求、生成脚本和配音。没有它，软件仍能打开，但效果会明显变弱。</p>
+            <p class="masked">${providers.dashscope?.configured ? `已配置：${escapeHtml(providers.dashscope.masked)}，留空表示不修改` : "未配置，建议先填写这个。"} </p>
+            <label class="field">DashScope API Key<input name="dashscopeApiKey" autocomplete="off" placeholder="粘贴你的 DashScope Key"></label>
+            <label class="field">阿里 TTS 模型<input name="aliyunTtsModel" value="${escapeHtml(state.settings?.ttsModel || "qwen3-tts-instruct-flash")}"></label>
+            <label class="field"><input name="clearDashscope" type="checkbox">清除 DashScope Key</label>
+          </div>
+          <div class="setup-card">
+            <strong>Pexels 素材库</strong>
+            <p>用于搜索真实图片和视频素材。没有它，也可以用本地素材或兜底素材。</p>
+            <p class="masked">${providers.pexels?.configured ? `已配置：${escapeHtml(providers.pexels.masked)}，留空表示不修改` : "未配置。"} </p>
+            <label class="field">Pexels API Key<input name="pexelsApiKey" autocomplete="off" placeholder="可选，粘贴 Pexels Key"></label>
+            <label class="field"><input name="clearPexels" type="checkbox">清除 Pexels Key</label>
+          </div>
+          <div class="setup-card">
+            <strong>Pixabay 素材库</strong>
+            <p>用于补充真实视频素材。没有它，不影响基础生成。</p>
+            <p class="masked">${providers.pixabay?.configured ? `已配置：${escapeHtml(providers.pixabay.masked)}，留空表示不修改` : "未配置。"} </p>
+            <label class="field">Pixabay API Key<input name="pixabayApiKey" autocomplete="off" placeholder="可选，粘贴 Pixabay Key"></label>
+            <label class="field"><input name="clearPixabay" type="checkbox">清除 Pixabay Key</label>
+          </div>
+          <div class="setup-actions">
+            <button class="primary" type="submit">保存配置</button>
+            <button class="ghost" id="refreshSettingsButton" type="button">刷新状态</button>
+          </div>
+        </form>
+      </section>`;
+      sidePanel.querySelector("#settingsForm")?.addEventListener("submit", saveSettings);
+      sidePanel.querySelector("#refreshSettingsButton")?.addEventListener("click", showSettingsCenter);
+      sidePanel.querySelector("#closeSettingsButton")?.addEventListener("click", () => {
+        state.settingsNotice = "";
+        if (state.project) renderSidePanel();
+        else renderEmptyState();
+      });
+    }
+
+    function renderSettingsSummary() {
+      const providers = state.settings?.providers || {};
+      return `<div class="status-row">
+        ${settingsChip("AI", providers.dashscope?.configured)}
+        ${settingsChip("Pexels 素材", providers.pexels?.configured)}
+        ${settingsChip("Pixabay 素材", providers.pixabay?.configured)}
+      </div>`;
+    }
+
+    function settingsChip(label, configured) {
+      return `<span class="status-chip ${configured ? "is-ready" : "is-missing"}">${escapeHtml(label)}：${configured ? "已配置" : "未配置"}</span>`;
+    }
+
+    function settingsTextStatus() {
+      const providers = state.settings?.providers || {};
+      return `AI ${providers.dashscope?.configured ? "已配置" : "未配置"} / 素材库 ${providers.pexels?.configured || providers.pixabay?.configured ? "已配置" : "未配置"}`;
     }
 
     function renderAssetButtons(userAssets, scene, selected = null) {

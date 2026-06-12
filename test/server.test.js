@@ -1,6 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { contentType, resolveSafeFilePath, toPublicJob, toPublicProject } from "../src/server.js";
+import { mkdtemp, readFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import { contentType, handleSettingsPayload, resolveSafeFilePath, toPublicJob, toPublicProject } from "../src/server.js";
 
 function baseJob(outputPath = null, renderer = null) {
   return {
@@ -138,4 +141,56 @@ test("contentType returns browser-safe image mime types", () => {
   assert.equal(contentType("cover.jpeg"), "image/jpeg");
   assert.equal(contentType("cover.png"), "image/png");
   assert.equal(contentType("cover.webp"), "image/webp");
+});
+
+test("handleSettingsPayload saves settings without exposing full keys", async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "ai-motions-settings-api-"));
+  const filePath = path.join(dir, ".env");
+  const env = {};
+
+  const settings = await handleSettingsPayload({
+    filePath,
+    env,
+    payload: {
+      dashscopeApiKey: "dashscope-secret-1234",
+      pexelsApiKey: "pexels-secret-5678",
+      pixabayApiKey: "pixabay-secret-9999",
+      aliyunTtsModel: "qwen3-tts-instruct-flash",
+    },
+  });
+
+  const content = await readFile(filePath, "utf8");
+  assert.match(content, /DASHSCOPE_API_KEY=dashscope-secret-1234/);
+  assert.equal(env.DASHSCOPE_API_KEY, "dashscope-secret-1234");
+  assert.equal(settings.providers.dashscope.masked, "****1234");
+  assert.equal(JSON.stringify(settings).includes("dashscope-secret-1234"), false);
+});
+
+test("handleSettingsPayload ignores blank values and clears selected keys", async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "ai-motions-settings-api-"));
+  const filePath = path.join(dir, ".env");
+  const env = {};
+
+  await handleSettingsPayload({
+    filePath,
+    env,
+    payload: {
+      dashscopeApiKey: "dashscope-secret-1234",
+      pexelsApiKey: "pexels-secret-5678",
+    },
+  });
+  const settings = await handleSettingsPayload({
+    filePath,
+    env,
+    payload: {
+      dashscopeApiKey: "",
+      clearPexels: true,
+    },
+  });
+
+  const content = await readFile(filePath, "utf8");
+  assert.match(content, /DASHSCOPE_API_KEY=dashscope-secret-1234/);
+  assert.doesNotMatch(content, /PEXELS_API_KEY=/);
+  assert.equal(settings.providers.dashscope.configured, true);
+  assert.equal(settings.providers.pexels.configured, false);
 });
