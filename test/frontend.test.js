@@ -51,7 +51,9 @@ test("settings center gives beginners clear provider setup guidance", async () =
   assert.match(html, /阿里 DashScope/);
   assert.match(html, /用于理解你的需求、生成脚本和配音/);
   assert.match(html, /Pexels 素材库/);
-  assert.match(html, /Pixabay 素材库/);
+  assert.match(html, /主要用于搜索真实图片，也会补充视频素材/);
+  assert.match(html, /Pixabay 视频素材库/);
+  assert.match(html, /当 Pexels 素材不够时使用/);
   assert.match(html, /去配置/);
 });
 
@@ -61,4 +63,13 @@ test("settings center persists keys through API instead of localStorage", async 
   assert.match(html, /\/api\/settings/);
   assert.match(html, /saveSettings/);
   assert.doesNotMatch(html, /localStorage\.setItem\([^)]*(DASHSCOPE|PEXELS|PIXABAY|OPENAI|ApiKey|apiKey)/);
+});
+
+test("settings center hides key inputs and explains stale server errors", async () => {
+  const html = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
+
+  assert.match(html, /name="dashscopeApiKey"[^>]+type="password"/);
+  assert.match(html, /name="pexelsApiKey"[^>]+type="password"/);
+  assert.match(html, /name="pixabayApiKey"[^>]+type="password"/);
+  assert.match(html, /配置接口不可用。请重启本地服务后再保存配置。/);
 });

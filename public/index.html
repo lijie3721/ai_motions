@@ -1389,7 +1389,7 @@
         renderHeader();
         renderActions();
       } catch (error) {
-        alert(error.message);
+        alert(settingsErrorMessage(error));
         renderSettingsCenter();
       }
     }
@@ -1926,22 +1926,22 @@
             <strong>阿里 DashScope</strong>
             <p>用于理解你的需求、生成脚本和配音。没有它，软件仍能打开，但效果会明显变弱。</p>
             <p class="masked">${providers.dashscope?.configured ? `已配置：${escapeHtml(providers.dashscope.masked)}，留空表示不修改` : "未配置，建议先填写这个。"} </p>
-            <label class="field">DashScope API Key<input name="dashscopeApiKey" autocomplete="off" placeholder="粘贴你的 DashScope Key"></label>
+            <label class="field">DashScope API Key<input name="dashscopeApiKey" type="password" autocomplete="off" placeholder="粘贴你的 DashScope Key"></label>
             <label class="field">阿里 TTS 模型<input name="aliyunTtsModel" value="${escapeHtml(state.settings?.ttsModel || "qwen3-tts-instruct-flash")}"></label>
             <label class="field"><input name="clearDashscope" type="checkbox">清除 DashScope Key</label>
           </div>
           <div class="setup-card">
             <strong>Pexels 素材库</strong>
-            <p>用于搜索真实图片和视频素材。没有它，也可以用本地素材或兜底素材。</p>
+            <p>推荐优先配置。主要用于搜索真实图片，也会补充视频素材。没有它，也可以用本地素材或兜底素材。</p>
             <p class="masked">${providers.pexels?.configured ? `已配置：${escapeHtml(providers.pexels.masked)}，留空表示不修改` : "未配置。"} </p>
-            <label class="field">Pexels API Key<input name="pexelsApiKey" autocomplete="off" placeholder="可选，粘贴 Pexels Key"></label>
+            <label class="field">Pexels API Key<input name="pexelsApiKey" type="password" autocomplete="off" placeholder="可选，粘贴 Pexels Key"></label>
             <label class="field"><input name="clearPexels" type="checkbox">清除 Pexels Key</label>
           </div>
           <div class="setup-card">
-            <strong>Pixabay 素材库</strong>
-            <p>用于补充真实视频素材。没有它，不影响基础生成。</p>
+            <strong>Pixabay 视频素材库</strong>
+            <p>可选。主要用于补充真实视频素材，当 Pexels 素材不够时使用。没有它，不影响基础生成。</p>
             <p class="masked">${providers.pixabay?.configured ? `已配置：${escapeHtml(providers.pixabay.masked)}，留空表示不修改` : "未配置。"} </p>
-            <label class="field">Pixabay API Key<input name="pixabayApiKey" autocomplete="off" placeholder="可选，粘贴 Pixabay Key"></label>
+            <label class="field">Pixabay API Key<input name="pixabayApiKey" type="password" autocomplete="off" placeholder="可选，粘贴 Pixabay Key"></label>
             <label class="field"><input name="clearPixabay" type="checkbox">清除 Pixabay Key</label>
           </div>
           <div class="setup-actions">
@@ -1975,6 +1975,13 @@
     function settingsTextStatus() {
       const providers = state.settings?.providers || {};
       return `AI ${providers.dashscope?.configured ? "已配置" : "未配置"} / 素材库 ${providers.pexels?.configured || providers.pixabay?.configured ? "已配置" : "未配置"}`;
+    }
+
+    function settingsErrorMessage(error) {
+      if (String(error?.message || "").includes("Not found")) {
+        return "配置接口不可用。请重启本地服务后再保存配置。";
+      }
+      return error.message;
     }
 
     function renderAssetButtons(userAssets, scene, selected = null) {
