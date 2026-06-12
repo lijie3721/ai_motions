@@ -1,0 +1,14 @@
+node_modules/
+uploads/
+jobs/
+data/
+
+.DS_Store
+*.log
+tmp-*.png
+*.sqlite
+*.sqlite-*
+
+.env
+.env.*
+!.env.example

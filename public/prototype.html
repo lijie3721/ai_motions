@@ -1,0 +1,780 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI Motions Studio Prototype</title>
+  <style>
+    :root {
+      --ink: #16130f;
+      --paper: #f6f1e7;
+      --panel: #fffaf0;
+      --line: #d7cab8;
+      --muted: #766f64;
+      --red: #df3f28;
+      --green: #2f5f54;
+      --blue: #294d7a;
+      --gold: #c79a43;
+      --charcoal: #10100e;
+      --shadow: 0 24px 70px rgba(22, 19, 15, 0.18);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        linear-gradient(90deg, rgba(22, 19, 15, 0.045) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(22, 19, 15, 0.04) 1px, transparent 1px),
+        var(--paper);
+      background-size: 28px 28px;
+      font-family: "Avenir Next", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    }
+
+    button, input, textarea, select { font: inherit; }
+    button { cursor: pointer; }
+
+    .shell {
+      height: 100vh;
+      display: grid;
+      grid-template-columns: minmax(360px, 430px) minmax(0, 1fr);
+      overflow: hidden;
+    }
+
+    .chat {
+      min-height: 0;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      border-right: 1px solid var(--line);
+      background: rgba(255, 250, 240, 0.92);
+    }
+
+    .brand {
+      padding: 22px 24px 18px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .mark {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      color: var(--paper);
+      background: var(--charcoal);
+      font: 900 22px Georgia, serif;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font: 900 23px Georgia, serif;
+      letter-spacing: -0.01em;
+    }
+
+    .pill {
+      border: 1px solid var(--ink);
+      padding: 7px 9px;
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      background: var(--paper);
+    }
+
+    .messages {
+      min-height: 0;
+      overflow: auto;
+      padding: 20px 22px;
+      display: grid;
+      align-content: start;
+      gap: 12px;
+    }
+
+    .msg {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      padding: 13px 14px;
+      line-height: 1.45;
+      white-space: pre-wrap;
+      box-shadow: 5px 5px 0 rgba(22, 19, 15, 0.04);
+    }
+
+    .msg.user {
+      color: var(--paper);
+      background: var(--charcoal);
+      border-color: var(--charcoal);
+      margin-left: 22px;
+    }
+
+    .choice-card {
+      display: grid;
+      gap: 10px;
+      padding: 14px;
+      border: 1px solid var(--ink);
+      background: #fffdf8;
+    }
+
+    .choice-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .choice {
+      border: 1px solid var(--line);
+      background: var(--paper);
+      padding: 10px;
+      text-align: left;
+      font-weight: 800;
+      line-height: 1.25;
+    }
+
+    .choice.is-selected {
+      border-color: var(--red);
+      background: #ffe3d9;
+      box-shadow: inset 0 0 0 2px var(--red);
+    }
+
+    .composer {
+      border-top: 1px solid var(--line);
+      padding: 16px;
+      display: grid;
+      gap: 10px;
+      background: var(--panel);
+    }
+
+    .quick {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .quick button {
+      border: 1px solid var(--line);
+      background: var(--paper);
+      padding: 7px 9px;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 82px;
+      resize: vertical;
+      border: 1px solid var(--ink);
+      background: #fffdf8;
+      padding: 12px;
+      line-height: 1.45;
+    }
+
+    .composer-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .upload-label {
+      border: 1px dashed var(--muted);
+      padding: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .primary {
+      border: 0;
+      background: var(--red);
+      color: #fff8ef;
+      padding: 11px 15px;
+      font-weight: 900;
+    }
+
+    .workspace {
+      min-width: 0;
+      min-height: 0;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      overflow: hidden;
+    }
+
+    .topbar {
+      border-bottom: 1px solid var(--line);
+      padding: 20px 26px 16px;
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      align-items: center;
+      background: rgba(246, 241, 231, 0.82);
+    }
+
+    .topbar h2 {
+      margin: 0;
+      font: 900 30px Georgia, serif;
+      line-height: 1.05;
+    }
+
+    .top-actions {
+      display: flex;
+      gap: 9px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .ghost, .solid {
+      border: 1px solid var(--ink);
+      padding: 9px 11px;
+      background: var(--panel);
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .solid {
+      color: #fff8ef;
+      border-color: var(--red);
+      background: var(--red);
+    }
+
+    .stage {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 340px;
+      gap: 18px;
+      padding: 20px 26px;
+      overflow: hidden;
+    }
+
+    .preview-panel {
+      min-width: 0;
+      min-height: 0;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      gap: 14px;
+    }
+
+    .preview-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .preview-head strong {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    .ratio-tabs {
+      display: flex;
+      gap: 6px;
+    }
+
+    .ratio-tabs button {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      padding: 6px 8px;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .ratio-tabs .active {
+      color: var(--paper);
+      background: var(--charcoal);
+      border-color: var(--charcoal);
+    }
+
+    .video-frame {
+      min-height: 390px;
+      display: grid;
+      place-items: center;
+      background: var(--charcoal);
+      box-shadow: var(--shadow);
+      padding: 18px;
+      overflow: hidden;
+    }
+
+    .video-canvas {
+      width: min(100%, 860px);
+      aspect-ratio: 16 / 9;
+      position: relative;
+      overflow: hidden;
+      background-image:
+        linear-gradient(0deg, rgba(16, 16, 14, 0.88), rgba(16, 16, 14, 0.08)),
+        url("/public/assets/hotpot/hotpot-table.jpg");
+      background-size: cover;
+      background-position: center;
+      color: var(--paper);
+    }
+
+    .video-canvas::before {
+      content: "";
+      position: absolute;
+      inset: -16%;
+      background:
+        linear-gradient(105deg, transparent 0 43%, rgba(255,255,255,0.18) 45%, transparent 48%),
+        radial-gradient(circle at 20% 18%, rgba(223, 63, 40, 0.42), transparent 25%);
+      animation: sweep 5s infinite linear;
+    }
+
+    @keyframes sweep {
+      from { transform: translateX(-14%) rotate(0deg); }
+      to { transform: translateX(14%) rotate(0deg); }
+    }
+
+    .timecode {
+      position: absolute;
+      top: 18px;
+      left: 18px;
+      background: rgba(16, 16, 14, 0.76);
+      border: 1px solid rgba(246, 241, 231, 0.32);
+      padding: 7px 9px;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+    }
+
+    .hero-caption {
+      position: absolute;
+      left: 34px;
+      right: 34px;
+      bottom: 30px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .hero-caption span {
+      width: max-content;
+      max-width: 100%;
+      background: var(--red);
+      padding: 7px 10px;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .hero-caption h3 {
+      margin: 0;
+      max-width: 620px;
+      font: 900 clamp(28px, 4vw, 58px) Georgia, serif;
+      line-height: 0.98;
+    }
+
+    .confirm-banner {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: center;
+      border: 1px solid var(--ink);
+      background: #fff2d7;
+      padding: 12px 14px;
+      margin-top: 14px;
+    }
+
+    .confirm-banner strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .side {
+      min-height: 0;
+      overflow: auto;
+      display: grid;
+      align-content: start;
+      gap: 12px;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      padding: 14px;
+    }
+
+    .panel h3 {
+      margin: 0 0 12px;
+      font: 900 18px Georgia, serif;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+      margin-bottom: 10px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+    }
+
+    .field input, .field textarea, .field select {
+      min-height: 0;
+      border: 1px solid var(--line);
+      background: #fffdf8;
+      padding: 9px;
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+
+    .field textarea { min-height: 72px; }
+
+    .asset-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 9px;
+    }
+
+    .asset {
+      min-height: 88px;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      background-size: cover;
+      background-position: center;
+    }
+
+    .asset::after {
+      content: attr(data-label);
+      position: absolute;
+      left: 8px;
+      right: 8px;
+      bottom: 8px;
+      color: var(--paper);
+      font-size: 12px;
+      font-weight: 900;
+      text-shadow: 0 2px 12px rgba(0,0,0,0.8);
+    }
+
+    .asset.is-user {
+      border-color: var(--red);
+      box-shadow: inset 0 0 0 2px var(--red);
+    }
+
+    .timeline {
+      min-height: 0;
+      border-top: 1px solid var(--line);
+      padding: 16px 26px 20px;
+      background: rgba(255, 250, 240, 0.78);
+      overflow: hidden;
+    }
+
+    .timeline-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 12px;
+    }
+
+    .timeline-head h3 {
+      margin: 0;
+      font: 900 20px Georgia, serif;
+    }
+
+    .scene-row {
+      display: grid;
+      grid-auto-flow: column;
+      grid-auto-columns: minmax(250px, 310px);
+      gap: 12px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+
+    .scene-card {
+      min-height: 156px;
+      display: grid;
+      align-content: space-between;
+      gap: 10px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      padding: 13px;
+    }
+
+    .scene-card.active {
+      border-color: var(--red);
+      box-shadow: inset 0 0 0 2px var(--red);
+    }
+
+    .scene-card h4 {
+      margin: 0;
+      font-size: 16px;
+      line-height: 1.22;
+    }
+
+    .scene-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .shot-track {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 5px;
+    }
+
+    .shot {
+      height: 34px;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(22, 19, 15, 0.18);
+      background-size: cover;
+      background-position: center;
+    }
+
+    .shot::after {
+      content: attr(data-time);
+      position: absolute;
+      inset: auto 4px 3px auto;
+      color: #fff8ef;
+      font-size: 9px;
+      font-weight: 900;
+      text-shadow: 0 1px 8px rgba(0,0,0,0.8);
+    }
+
+    .shot.selected {
+      border-color: var(--red);
+      box-shadow: inset 0 0 0 2px var(--red);
+    }
+
+    @media (max-width: 1120px) {
+      .shell {
+        height: auto;
+        min-height: 100vh;
+        grid-template-columns: 1fr;
+        overflow: visible;
+      }
+
+      .chat {
+        min-height: 620px;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .workspace {
+        overflow: visible;
+      }
+
+      .stage {
+        grid-template-columns: 1fr;
+        overflow: visible;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .topbar, .preview-head, .timeline-head, .confirm-banner {
+        align-items: stretch;
+        flex-direction: column;
+        display: flex;
+      }
+
+      .choice-grid, .asset-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .video-frame {
+        min-height: 260px;
+        padding: 10px;
+      }
+
+      .hero-caption {
+        left: 18px;
+        right: 18px;
+        bottom: 18px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="chat">
+      <header class="brand">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div class="mark">M</div>
+          <h1>AI Motions</h1>
+        </div>
+        <div class="pill">Prototype</div>
+      </header>
+
+      <section class="messages">
+        <div class="msg user">帮我做一个宣传我们家火锅店的视频</div>
+        <div class="msg">
+          我先确认几个会直接影响成片的问题。确认后我再生成分镜和视频草稿。
+        </div>
+        <div class="choice-card">
+          <strong>视频方向确认</strong>
+          <div class="choice-grid">
+            <button class="choice is-selected">抖音/视频号 · 9:16<br><small>快节奏，高频切镜</small></button>
+            <button class="choice">门店大屏 · 16:9<br><small>更稳，更有质感</small></button>
+            <button class="choice is-selected">热闹烟火气<br><small>锅底、聚餐、人声</small></button>
+            <button class="choice">高级餐饮感<br><small>灯光、食材、慢镜头</small></button>
+          </div>
+          <button class="primary" type="button">确认方案并生成分镜</button>
+        </div>
+        <div class="msg">
+          已生成 4 段分镜和 17 个镜头。你可以点右侧任意镜头换图、改字幕、拖动顺序，或者继续直接说“第二段更热闹一点”。
+        </div>
+        <div class="msg user">把第二段第一张图换成我上传的门店照片，旁白更像真人说话。</div>
+      </section>
+
+      <form class="composer">
+        <div class="quick">
+          <button type="button">第二段更热闹</button>
+          <button type="button">换成竖屏</button>
+          <button type="button">少一点文字</button>
+          <button type="button">重新配图</button>
+        </div>
+        <textarea placeholder="继续描述你想怎么改，例如：把结尾改成扫码领券，整体节奏更快。"></textarea>
+        <div class="composer-row">
+          <label class="upload-label">上传 PPT/PDF/图片/视频素材</label>
+          <button class="primary" type="button">Send</button>
+        </div>
+      </form>
+    </aside>
+
+    <main class="workspace">
+      <header class="topbar">
+        <div>
+          <h2>火锅店开业促销短视频</h2>
+          <div style="margin-top:7px;color:var(--muted);font-weight:800">Draft ready · 25s · 4 scenes · 17 shots · Aliyun voice</div>
+        </div>
+        <nav class="top-actions">
+          <button class="ghost" type="button">保存草稿</button>
+          <button class="ghost" type="button">预览 HTML</button>
+          <button class="solid" type="button">确认并生成视频</button>
+        </nav>
+      </header>
+
+      <section class="stage">
+        <div class="preview-panel">
+          <div class="preview-head">
+            <strong>Live video preview</strong>
+            <div class="ratio-tabs">
+              <button class="active" type="button">9:16</button>
+              <button type="button">16:9</button>
+              <button type="button">1:1</button>
+            </div>
+          </div>
+          <div class="video-frame">
+            <div class="video-canvas">
+              <div class="timecode">00:08.12 · SCENE 02</div>
+              <div class="hero-caption">
+                <span>Snap zoom · Flash cut</span>
+                <h3>红油翻滚，朋友围坐，热气一上来就想下单</h3>
+              </div>
+            </div>
+          </div>
+          <div class="confirm-banner">
+            <div>
+              <strong>生成前确认</strong>
+              当前分镜已更新，旧视频会失效。确认文案、素材、比例后再生成最终 MP4。
+            </div>
+            <button class="solid" type="button">Generate video draft</button>
+          </div>
+        </div>
+
+        <aside class="side">
+          <section class="panel">
+            <h3>Selected shot</h3>
+            <label class="field">字幕<input value="红油翻滚，朋友围坐"></label>
+            <label class="field">时长<input value="1.2s"></label>
+            <label class="field">动效
+              <select>
+                <option>Snap zoom</option>
+                <option>Whip pan</option>
+                <option>Parallax push</option>
+              </select>
+            </label>
+            <label class="field">旁白<textarea>这一锅热气上来，朋友聚餐的气氛就有了。</textarea></label>
+            <button class="primary" type="button">保存镜头修改</button>
+          </section>
+
+          <section class="panel">
+            <h3>Replace media</h3>
+            <div class="asset-grid">
+              <button class="asset" data-label="系统素材 · 锅底" style="background-image:url('/public/assets/hotpot/hotpot-table.jpg')" type="button"></button>
+              <button class="asset" data-label="系统素材 · 聚餐" style="background-image:url('/public/assets/hotpot/family-dining.jpg')" type="button"></button>
+              <button class="asset is-user" data-label="用户上传 · 门店照片" style="background-image:url('/public/assets/hotpot/restaurant.jpg')" type="button"></button>
+              <button class="asset" data-label="系统素材 · 食材" style="background-image:url('/public/assets/hotpot/storefront.jpg')" type="button"></button>
+            </div>
+          </section>
+
+          <section class="panel">
+            <h3>Scene editor</h3>
+            <label class="field">分镜标题<input value="把锅底和聚餐氛围拍出来"></label>
+            <label class="field">卖点<input value="红油锅底，朋友聚会，真实热气"></label>
+            <label class="field">视觉方向<textarea>近景拍锅底翻滚，快速切到朋友夹菜和门店环境，整体更热闹。</textarea></label>
+          </section>
+        </aside>
+      </section>
+
+      <section class="timeline">
+        <div class="timeline-head">
+          <h3>Storyboard & shot timeline</h3>
+          <span style="color:var(--muted);font-weight:800">点击镜头可编辑 · 拖动可排序 · 用户素材已锁定</span>
+        </div>
+        <div class="scene-row">
+          <article class="scene-card">
+            <div>
+              <h4>01 第一眼就想进店</h4>
+              <p>门头、招牌、开场钩子，建立第一印象。</p>
+            </div>
+            <div class="shot-track">
+              <button class="shot" data-time="0.7" style="background-image:url('/public/assets/hotpot/restaurant.jpg')" type="button"></button>
+              <button class="shot" data-time="0.5" style="background-image:url('/public/assets/hotpot/hotpot-table.jpg')" type="button"></button>
+              <button class="shot" data-time="0.9" style="background-image:url('/public/assets/hotpot/family-dining.jpg')" type="button"></button>
+              <button class="shot" data-time="1.1" style="background-image:url('/public/assets/hotpot/storefront.jpg')" type="button"></button>
+            </div>
+          </article>
+          <article class="scene-card active">
+            <div>
+              <h4>02 锅底和聚餐氛围</h4>
+              <p>高频切换锅底、夹菜、门店实拍和朋友聚餐。</p>
+            </div>
+            <div class="shot-track">
+              <button class="shot selected" data-time="1.2" style="background-image:url('/public/assets/hotpot/restaurant.jpg')" type="button"></button>
+              <button class="shot" data-time="0.8" style="background-image:url('/public/assets/hotpot/hotpot-table.jpg')" type="button"></button>
+              <button class="shot" data-time="0.6" style="background-image:url('/public/assets/hotpot/family-dining.jpg')" type="button"></button>
+              <button class="shot" data-time="1.0" style="background-image:url('/public/assets/hotpot/storefront.jpg')" type="button"></button>
+            </div>
+          </article>
+          <article class="scene-card">
+            <div>
+              <h4>03 让人想象在现场</h4>
+              <p>用人群、热气和餐桌动作建立信任。</p>
+            </div>
+            <div class="shot-track">
+              <button class="shot" data-time="0.8" style="background-image:url('/public/assets/hotpot/family-dining.jpg')" type="button"></button>
+              <button class="shot" data-time="0.9" style="background-image:url('/public/assets/hotpot/hotpot-table.jpg')" type="button"></button>
+              <button class="shot" data-time="0.7" style="background-image:url('/public/assets/hotpot/restaurant.jpg')" type="button"></button>
+              <button class="shot" data-time="1.0" style="background-image:url('/public/assets/hotpot/storefront.jpg')" type="button"></button>
+            </div>
+          </article>
+          <article class="scene-card">
+            <div>
+              <h4>04 到店领券 CTA</h4>
+              <p>明确促销动作，最后收束到门店和优惠。</p>
+            </div>
+            <div class="shot-track">
+              <button class="shot" data-time="1.4" style="background-image:url('/public/assets/hotpot/restaurant.jpg')" type="button"></button>
+              <button class="shot" data-time="0.8" style="background-image:url('/public/assets/hotpot/hotpot-table.jpg')" type="button"></button>
+              <button class="shot" data-time="1.1" style="background-image:url('/public/assets/hotpot/family-dining.jpg')" type="button"></button>
+              <button class="shot" data-time="0.7" style="background-image:url('/public/assets/hotpot/storefront.jpg')" type="button"></button>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>
